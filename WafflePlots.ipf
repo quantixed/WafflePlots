@@ -1,5 +1,13 @@
 #pragma TextEncoding = "UTF-8"
 #pragma rtGlobals=3		// Use modern global access method and strict wave access.
+#pragma DefaultTab={3,20,4}		// Set default tab width in Igor Pro 9 and later
+#include "PXPUtils"
+
+//	Example usage:
+//•WaffleMaker(31.0787,9.28397,65.083,9,0)
+//•WaffleMaker(10.2964,0.24258,56.6343,9,1)
+//•WaffleMaker(0,0,58.969,9,2)
+//•PXPUtils#MakeTheLayouts("wafflePlot",0,6, alphaSort = 1, saveIt = 0)
 
 Function WaffleMaker(aa,anb,bb,col,iter)
 	Variable aa, anb, bb, col, iter
@@ -15,7 +23,7 @@ Function WaffleMaker(aa,anb,bb,col,iter)
 	Make/O/N=(row * col,2) $("waffleXY_" + num2str(iter))
 	Wave/Z wXY = $("waffleXY_" + num2str(iter))
 	wXY[][0] = mod(p,col) //x
-	wXY[][1] = floor(p / col) //x
+	wXY[][1] = floor(p / col) //y
 	// set colors for waffle plot
 	Make/O/N=(row * col) $("waffleZ_" + num2str(iter)) = 0
 	Wave/Z wZ = $("waffleZ_" + num2str(iter))
@@ -28,20 +36,91 @@ Function WaffleMaker(aa,anb,bb,col,iter)
 	if(bb != 0)
 		wZ[aa + anb,total - 1] = 2 // bit 1 set
 	endif
-	// make colorWave - easier to write in other orientation then transpose
-	Make/O/N=(3,4) colorWave = {{230,230,230},{0,166,81},{237,28,36},{255,199,32}}
-	colorWave *= 257 // convert to 16-bit
-	MatrixTranspose colorWave
+	// assemble colorWave if not already present
+	WAVE/Z colorWave
+	if(!WaveExists(colorWave))
+		// make colorWave - easier to write in other orientation then transpose
+		Make/O/N=(3,4) colorWave = {{230,230,230},{0,166,81},{237,28,36},{255,199,32}}
+		colorWave *= 257 // convert to 16-bit
+		MatrixTranspose colorWave
+	endif
 	
-	String plotName = "wafflePlot" + "_" + num2str(iter)
+	DisplayWaffle("wafflePlot" + "_" + num2str(iter),wXY,wZ)
+End
+
+Function DisplayWaffle(plotName,xyWave,zWave)
+ 	String plotName
+ 	Wave xyWave, zWave
+ 	
+ 	WAVE/Z colorWave
+ 	WaveStats/RMD=[][0]/Q xyWave
+ 	Variable col = V_max + 1
+ 	WaveStats/RMD=[][1]/Q xyWave
+ 	Variable row = V_max + 1
 	KillWindow/Z $plotName
-	Display/N=$plotName wXY[][1] vs wXY[][0]
+	Display/N=$plotName xyWave[][1] vs xyWave[][0]
 	ModifyGraph/W=$plotName mode=3,marker=19
 	SetAxis/W=$plotName left row - 0.5,-0.5
 	SetAxis/W=$plotName bottom -0.5, col - 0.5
 	ModifyGraph/W=$plotName height={Plan,1,left,bottom}
-	ModifyGraph/W=$plotName msize=6
+	ModifyGraph/W=$plotName msize=4
 	ModifyGraph/W=$plotName noLabel=2,axThick=0
 	ModifyGraph/W=$plotName margin=2
-	ModifyGraph/W=$plotName zColor($NameOfWave(wXY))={wZ,*,*,cindexRGB,0,colorWave}
+	ModifyGraph/W=$plotName zColor($NameOfWave(xyWave))={zWave,*,*,cindexRGB,0,colorWave}
+End
+
+Function EqualiseWaffles()
+	// find size of biggest waffle
+	String wList = WaveList("waffleXY*",";","")
+	Variable nWaves = ItemsInList(wList)
+	Variable maxRow = 0, maxCol = 0, row, col
+	
+	Variable i
+	
+	for(i = 0; i < nWaves; i += 1)
+		WaveStats/RMD=[][0]/Q $StringFromList(i, wList)
+ 		maxCol = max(maxCol,V_max + 1)
+	 	WaveStats/RMD=[][1]/Q $StringFromList(i, wList)
+	 	maxRow = max(maxRow,V_max + 1)
+	endfor
+	
+	String wName
+	
+	for(i = 0; i < nWaves; i += 1)
+		wName = StringFromList(i, wList)
+		Wave w = $wName
+		WaveStats/RMD=[][0]/Q w
+ 		col = V_max + 1
+	 	WaveStats/RMD=[][1]/Q w
+	 	row = V_max + 1
+	 	if(col < maxCol || row < maxRow)
+	 		ResizeWaffle(w,maxRow,maxCol)
+	 	endif
+	endfor
+End
+
+Function ResizeWaffle(m0,row,col)
+	Wave m0
+	Variable row, col
+	
+	if(DimSize(m0,0) > row * col)
+		Print NameOfWave(m0), "too many points"
+		return -1
+	endif
+	
+	String xyWaveName = NameOfWave(m0)
+	Make/O/N=(row * col, 2) $xyWaveName
+	Wave m0 = $xyWaveName
+	m0[][0] = mod(p,col) //x
+	m0[][1] = floor(p / col) //y
+	
+	String zWaveName = ReplaceString("waffleXY_",xyWaveName,"waffleZ_")
+	Wave zW = $zWaveName
+	Duplicate/O/FREE zW, tempW
+	Make/O/N=(row * col) $zWaveName = 0
+	Wave zW = $zWaveName
+	zW[0,DimSize(tempW,0) - 1] = tempW[p]
+	DisplayWaffle(ReplaceString("waffleXY_",xyWaveName,"wafflePlot_"),m0,zW)
+	
+	return 0
 End
