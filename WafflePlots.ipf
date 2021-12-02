@@ -3,12 +3,25 @@
 #pragma DefaultTab={3,20,4}		// Set default tab width in Igor Pro 9 and later
 #include "PXPUtils"
 
-//	Example usage:
-//•WaffleMaker(31.0787,9.28397,65.083,9,0)
-//•WaffleMaker(10.2964,0.24258,56.6343,9,1)
-//•WaffleMaker(0,0,58.969,9,2)
-//•PXPUtils#MakeTheLayouts("wafflePlot",0,6, alphaSort = 1, saveIt = 0)
+// Waffle Plots
+// Show proportions in a waffle style plot instead of using a Venn diagram
+// Intended for use to display colocalisation data - from two channels
+// Limitations:
+//	Uses circles only (any shape is possible but requires more development)
+//	Shows two groups and their intersection only (hard coded to color green/yellow/red)
 
+//	Example usage:
+//WaffleMaker(33,12,62,9,0)
+//WaffleMaker(11,1,57,9,1)
+//WaffleMaker(0,0,55,8,2)
+//EqualiseWaffles() // makes all waffles the same size
+//PXPUtils#MakeTheLayouts("wafflePlot",0,6, alphaSort = 1, saveIt = 0)
+
+/// @param	aa	Variable	number of green spots
+/// @param	anb	Variable	number of yellow spots (intersection/colocalisation)
+///	@param	bb	Variable	number of red spots
+///	@param	col	Variable	number of columns (rows are set by total number of spots)
+///	@param	iter	Int		Plot number (allows for recreating/overwriting)
 Function WaffleMaker(aa,anb,bb,col,iter)
 	Variable aa, anb, bb, col, iter
 	aa = round(aa)
