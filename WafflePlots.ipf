@@ -17,6 +17,36 @@
 //EqualiseWaffles() // makes all waffles the same size
 //PXPUtils#MakeTheLayouts("wafflePlot",0,6, alphaSort = 1, saveIt = 0)
 
+////////////////////////////////////////////////////////////////////////
+// Menu items
+////////////////////////////////////////////////////////////////////////
+Menu "Macros"
+	"Equalise Waffles", /Q, EqualiseWaffles()
+	Submenu "Waffle Colors"
+		Submenu "Presets"
+			"Green-Yellow-Red", /Q, RemakeColorWave("GYR")
+			"Green-Cyan-Magenta", /Q, RemakeColorWave("GCM")
+			"Tol 1", /Q, RemakeColorWave("Tol1")
+			"Tol 2", /Q, RemakeColorWave("Tol2")
+			"Wong 1", /Q, RemakeColorWave("Wong1")
+			"Wong 2", /Q, RemakeColorWave("Wong2")
+		End
+		"User Selection", /Q, UserControlForRecoloring()
+		"Restore Last Color Scheme", /Q, RestoreLast()
+	End
+	Submenu "Waffle Symbols"
+		"Circles Filled", /Q, ChangeSymbols(19)
+		"Circles Open", /Q, ChangeSymbols(8)
+		"Squares Filled", /Q, ChangeSymbols(16)
+		"Specify...", /Q, SpecifySymbols()
+	End
+End
+
+
+////////////////////////////////////////////////////////////////////////
+// Master functions and wrappers
+////////////////////////////////////////////////////////////////////////
+
 /// @param	aa	Variable	number of green spots
 /// @param	anb	Variable	number of yellow spots (intersection/colocalisation)
 ///	@param	bb	Variable	number of red spots
@@ -136,4 +166,94 @@ Function ResizeWaffle(m0,row,col)
 	DisplayWaffle(ReplaceString("waffleXY_",xyWaveName,"wafflePlot_"),m0,zW)
 	
 	return 0
+End
+
+////////////////////////////////////////////////////////////////////////
+// Utility functions
+////////////////////////////////////////////////////////////////////////
+Function RemakeColorWave(colorStr)
+	String colorStr
+	
+	SetDataFolder root:
+	strswitch(colorStr)
+		case "GYR" :
+			Make/O/N=(3,4) colorWave = {{230,230,230},{0,166,81},{237,28,36},{255,199,32}}
+			break
+		case "GCM" :
+			Make/O/N=(3,4) colorWave = {{230,230,230},{0,166,81},{193,0,102},{4,119,146}}
+			break
+		case "Tol1" :
+			Make/O/N=(3,4) colorWave = {{187,187,187},{34,136,51},{238,102,119},{204,187,68}}
+			break
+		case "Tol2" :
+			Make/O/N=(3,4) colorWave = {{187,187,187},{34,136,51},{170,51,119},{102,204,238}}
+			break
+		case "Wong1" :
+			//https://www.nature.com/articles/nmeth.1618
+			// Bluish Green, Yellow, Vermillion
+			Make/O/N=(3,4) colorWave = {{230,230,230},{0,158,115},{213,94,0},{240,228,66}}
+			break
+		case "Wong2" :
+			// Bluish green, Reddish purple, Sky blue
+			Make/O/N=(3,4) colorWave = {{230,230,230},{0,158,115},{204,121,167},{86,180,233}}
+			break
+	endswitch
+	
+	colorWave *= 257 // convert to 16-bit
+	MatrixTranspose colorWave
+End
+
+Function UserControlForRecoloring()
+	SetDataFolder root:
+	WAVE/Z colorWave = root:colorWave
+	if(!WaveExists(colorWave))
+		DoAlert 0, "3-column colorwave required"
+		return -1
+	endif
+	Duplicate/O colorWave, colorWave_BKP
+	// present dialog to work on recoloring
+	CWE_MakeClientColorEditor(colorWave, 0, 65535, "Edit Colors","ColorWave","RecolorAllPlots")
+	
+	return 0
+End
+
+Function RestoreLast()
+	SetDataFolder root:
+	WAVE/Z colorWave, colorWave_BKP
+	if(!WaveExists(colorWave))
+		DoAlert 0, "3-column colorwave required"
+		return -1
+	endif
+	if(!WaveExists(colorWave_BKP))
+		DoAlert 0, "No backup colorwave found"
+		return -1
+	endif
+	Duplicate/O colorWave_BKP,colorWave
+	
+	return 0
+End
+
+Function ChangeSymbols(sym)
+	Variable sym
+	
+	String WindowList = WinList("wafflePlot*", ";", "WIN:1")
+	Variable nWindows = ItemsInList(WindowList)
+	
+	Variable i
+	
+	for(i = 0; i < nWindows; i += 1)
+		ModifyGraph/W=$(StringFromList(i,WindowList)) marker=sym
+	endfor
+	DoWindow/F/Z allWafflePlotLayout
+End
+
+Function SpecifySymbols()
+	Variable symbolNum = 19
+	Prompt symbolNum, "Symbol Number"
+	DoPrompt "Enter new symbol", symbolNum
+	if(V_Flag)
+		return -1
+	endif
+	ChangeSymbols(symbolNum)
+	DoWindow/F/Z allWafflePlotLayout
 End
