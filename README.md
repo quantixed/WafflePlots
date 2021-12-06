@@ -1,6 +1,6 @@
 # WafflePlots
 
-Making waffle plots in Igor Pro.
+Making waffle plots in Igor Pro. Explainer [here](https://quantixed.org/2021/12/06/line-up-waffle-plots-for-colocalisation-data/).
 
 Intended for visualisation of microscopy colocalization data. Instead of using Venn or Euler diagrams, waffle plots allow us to get a feel of object-based colocalisation (sometimes referred to as co-occupation).
 
