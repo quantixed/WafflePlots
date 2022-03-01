@@ -2,6 +2,7 @@
 #pragma rtGlobals=3		// Use modern global access method and strict wave access.
 #pragma DefaultTab={3,20,4}		// Set default tab width in Igor Pro 9 and later
 #include "PXPUtils"
+#include <ColorWaveEditor>
 
 // Waffle Plots
 // Show proportions in a waffle style plot instead of using a Venn diagram
@@ -39,6 +40,7 @@ Menu "Macros"
 		"Circles Open", /Q, ChangeSymbols(8)
 		"Squares Filled", /Q, ChangeSymbols(16)
 		"Specify...", /Q, SpecifySymbols()
+		"Change Size", /Q, SpecifySize()
 	End
 End
 
@@ -255,5 +257,30 @@ Function SpecifySymbols()
 		return -1
 	endif
 	ChangeSymbols(symbolNum)
+	DoWindow/F/Z allWafflePlotLayout
+End
+
+Function ChangeSize(size)
+	Variable size
+	
+	String WindowList = WinList("wafflePlot*", ";", "WIN:1")
+	Variable nWindows = ItemsInList(WindowList)
+	
+	Variable i
+	
+	for(i = 0; i < nWindows; i += 1)
+		ModifyGraph/W=$(StringFromList(i,WindowList)) msize=size
+	endfor
+	DoWindow/F/Z allWafflePlotLayout
+End
+
+Function SpecifySize()
+	Variable sizeNum = 4
+	Prompt sizeNum, "Size (default = 4, 0 for Auto)"
+	DoPrompt "Enter new size", sizeNum
+	if(V_Flag)
+		return -1
+	endif
+	ChangeSize(sizeNum)
 	DoWindow/F/Z allWafflePlotLayout
 End
